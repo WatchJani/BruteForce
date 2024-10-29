@@ -13,15 +13,15 @@ func BruteForce(data *[]byte) {
 	block := make([]byte, 1, 4)
 	indexSaver := make([]int, 1, 4)
 
-	for index := 0; index < 12; index++ {
+	for index := 0; index < 13; index++ {
 		for f := 0; indexSaver[f] > len(list)-1; f++ {
-			if len(indexSaver) > f+1 {
+			indexSaver[f] = 0
+
+			if len(indexSaver) > f+1 && indexSaver[f+1] < len(list)-1 { //increase first next character
 				indexSaver[f+1]++
 				block[f+1] = list[indexSaver[f+1]]
-				indexSaver[f] = 0
-			} else {
-				block = append(block, list[0]) //Dont touch
-				indexSaver[f] = 0
+			} else { //add new character
+				block = append(block, list[0])     //Dont touch
 				indexSaver = append(indexSaver, 0) //Dont touch
 			}
 		}
