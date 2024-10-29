@@ -1,21 +1,61 @@
 package main
 
+import (
+	"fmt"
+)
+
 func main() {
-	Combination(1254)
-	// fmt.Println(BruteForceChatGPT("Janko"))
+	fmt.Println(BruteForce("Janko"))
+	fmt.Println(findCombination(10_000_000_000))
 }
 
-func Combination(code int) {
-	
+func findCombination(position int) []int {
+	alphabet := "abcdefghijklmnopqrstuvwxyz"
+	alphabetSize := len(alphabet)
+
+	position -= 1
+
+	var length int
+	for {
+		numCombinations := pow(alphabetSize, length+1)
+		if position < numCombinations {
+			break
+		}
+		position -= numCombinations
+		length++
+	}
+
+	result := make([]int, length+1)
+
+	for i := length; i >= 0; i-- {
+		result[i] = int(alphabet[position%alphabetSize])
+		position /= alphabetSize
+	}
+
+	for index := 0; index < len(result)/2; index++ {
+		result[index], result[len(result)-1-index] = result[len(result)-1-index], result[index]
+	}
+
+	return result
 }
 
+func pow(a, b int) int {
+	result := 1
+	for b > 0 {
+		result *= a
+		b--
+	}
+	return result
+}
+
+// 10_000_000_000
 func BruteForce(password string) string {
-	list := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+	list := "abcdefghijklmnopqrstuvwxyz"
 
 	block := make([]byte, 1, 4)
 	indexSaver := make([]int, 1, 4)
 
-	for {
+	for index := 0; index < 1105; index++ {
 		for f := 0; indexSaver[f] > len(list)-1; f++ {
 			indexSaver[f] = 0
 
@@ -28,7 +68,6 @@ func BruteForce(password string) string {
 
 				block[f+1] = list[indexSaver[f+1]]
 			} else { //add new character
-
 				block = append(block, list[0])
 				indexSaver = append(indexSaver, 0)
 			}
@@ -38,8 +77,11 @@ func BruteForce(password string) string {
 
 		indexSaver[0]++
 
+		fmt.Println(index, string(block))
 		if string(block) == password {
 			return string(block)
 		}
 	}
+
+	return ""
 }
