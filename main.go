@@ -4,14 +4,54 @@ import (
 	"fmt"
 )
 
+const Characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
 func main() {
-	fmt.Println(BruteForce("Janko"))
-	fmt.Println(findCombination(10_000_000_000))
+	// fmt.Println(BruteForce("Janko"))
+
+	bf := New()
+
+	for index := range 6 {
+		go bf.Worker(index)
+	}
+
+	go func() {
+		for index := 0; ; index++ {
+			bf.dataStreamCh <- DataStream{
+				hash:       "Janko",
+				startPoint: findCombination(index * 10_000_000_000),
+			}
+		}
+	}()
+
+	fmt.Println(<-bf.responseCh)
+
+	// fmt.Println(findCombination(1))
+}
+
+type BruteForce struct {
+	dataStreamCh chan DataStream
+	responseCh   chan string
+}
+
+func New() BruteForce {
+	return BruteForce{
+		dataStreamCh: make(chan DataStream),
+		responseCh:   make(chan string),
+	}
+}
+
+type DataStream struct {
+	hash       string //password
+	startPoint []int
 }
 
 func findCombination(position int) []int {
-	alphabet := "abcdefghijklmnopqrstuvwxyz"
-	alphabetSize := len(alphabet)
+	if position == 0 {
+		return []int{0}
+	}
+
+	alphabetSize := len(Characters)
 
 	position -= 1
 
@@ -28,7 +68,7 @@ func findCombination(position int) []int {
 	result := make([]int, length+1)
 
 	for i := length; i >= 0; i-- {
-		result[i] = int(alphabet[position%alphabetSize])
+		result[i] = position % alphabetSize
 		position /= alphabetSize
 	}
 
@@ -49,39 +89,41 @@ func pow(a, b int) int {
 }
 
 // 10_000_000_000
-func BruteForce(password string) string {
-	list := "abcdefghijklmnopqrstuvwxyz"
+func (bf *BruteForce) Worker(workerIndex int) {
+	for {
+		store := <-bf.dataStreamCh
 
-	block := make([]byte, 1, 4)
-	indexSaver := make([]int, 1, 4)
+		indexSaver := store.startPoint
+		block := make([]byte, len(indexSaver))
+		for index, value := range indexSaver {
+			block[index] = Characters[value]
+		}
 
-	for index := 0; index < 1105; index++ {
-		for f := 0; indexSaver[f] > len(list)-1; f++ {
-			indexSaver[f] = 0
+		for index := 0; index < 10_000_000_000; index++ {
+			for f := 0; indexSaver[f] > len(Characters)-1; f++ {
+				indexSaver[f] = 0
 
-			if len(indexSaver) > f+1 { //increase first next character
-				indexSaver[f+1]++
-				if indexSaver[f+1] > len(list)-1 {
-					block[f+1] = list[0]
-					continue
+				if len(indexSaver) > f+1 { //increase first next character
+					indexSaver[f+1]++
+					if indexSaver[f+1] > len(Characters)-1 {
+						block[f+1] = Characters[0]
+						continue
+					}
+
+					block[f+1] = Characters[indexSaver[f+1]]
+				} else { //add new character
+					block = append(block, Characters[0])
+					indexSaver = append(indexSaver, 0)
 				}
+			}
 
-				block[f+1] = list[indexSaver[f+1]]
-			} else { //add new character
-				block = append(block, list[0])
-				indexSaver = append(indexSaver, 0)
+			block[0] = Characters[indexSaver[0]]
+
+			indexSaver[0]++
+
+			if string(block) == store.hash {
+				bf.responseCh <- string(block)
 			}
 		}
-
-		block[0] = list[indexSaver[0]]
-
-		indexSaver[0]++
-
-		fmt.Println(index, string(block))
-		if string(block) == password {
-			return string(block)
-		}
 	}
-
-	return ""
 }

@@ -6,7 +6,7 @@ import "testing"
 // 6778759411 ns/op
 func BenchmarkMyFn(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		BruteForce("JankoKondic")
+		// BruteForce("JankoKondic")
 	}
 }
 
