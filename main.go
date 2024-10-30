@@ -2,31 +2,49 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
+	"time"
 )
 
 const Characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 func main() {
-	// fmt.Println(BruteForce("Janko"))
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	bf := New()
+	start := time.Now()
 
-	for index := range 6 {
+	for index := range runtime.NumCPU() {
 		go bf.Worker(index)
 	}
 
+	//controlling system closing
 	go func() {
-		for index := 0; ; index++ {
+		<-sigs
+
+		fmt.Println(time.Since(start))
+		os.Exit(1)
+	}()
+
+	//2m22s
+	go func() {
+		for index := 0; index*10_000_000_000 < 1_000_000_000_000; index++ {
+			fmt.Println(index * 10_000_000_000)
 			bf.dataStreamCh <- DataStream{
-				hash:       "Janko",
+				hash:       "JankoKondic",
 				startPoint: findCombination(index * 10_000_000_000),
 			}
 		}
+
+		fmt.Println(time.Since(start))
+		os.Exit(1)
 	}()
 
 	fmt.Println(<-bf.responseCh)
-
-	// fmt.Println(findCombination(1))
 }
 
 type BruteForce struct {
