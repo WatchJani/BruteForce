@@ -119,9 +119,11 @@ func (bf *BruteForce) Worker(workerIndex int) {
 				indexSaver[0]++
 
 				if string(block) == store.hash {
-					bf.responseCh <- string(block)
+					break
 				}
 			}
+
+			bf.responseCh <- string(block)
 		}
 	}
 }
