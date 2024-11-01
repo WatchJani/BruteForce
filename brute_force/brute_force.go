@@ -21,12 +21,14 @@ func (bf *BruteForce) Send(dataStream DataStream) {
 type DataStream struct {
 	hash       string //password
 	startPoint []int
+	work       bool
 }
 
-func NewDataStream(hash string, startPoint []int) DataStream {
+func NewDataStream(hash string, startPoint []int, work bool) DataStream {
 	return DataStream{
 		hash:       hash,
 		startPoint: startPoint,
+		work:       work,
 	}
 }
 
@@ -79,36 +81,40 @@ func (bf *BruteForce) Worker(workerIndex int) {
 	for {
 		store := <-bf.dataStreamCh
 
-		indexSaver := store.startPoint
-		block := make([]byte, len(indexSaver))
-		for index, value := range indexSaver {
-			block[index] = Characters[value]
-		}
-
-		for ; index < 10_000_000_000; index++ {
-			for f := 0; indexSaver[f] > len(Characters)-1; f++ {
-				indexSaver[f] = 0
-
-				if len(indexSaver) > f+1 { //increase first next character
-					indexSaver[f+1]++
-					if indexSaver[f+1] > len(Characters)-1 {
-						block[f+1] = Characters[0]
-						continue
-					}
-
-					block[f+1] = Characters[indexSaver[f+1]]
-				} else { //add new character
-					block = append(block, Characters[0])
-					indexSaver = append(indexSaver, 0)
-				}
+		if store.work {
+			//wait
+		} else {
+			indexSaver := store.startPoint
+			block := make([]byte, len(indexSaver))
+			for index, value := range indexSaver {
+				block[index] = Characters[value]
 			}
 
-			block[0] = Characters[indexSaver[0]]
+			for ; index < 10_000_000_000; index++ {
+				for f := 0; indexSaver[f] > len(Characters)-1; f++ {
+					indexSaver[f] = 0
 
-			indexSaver[0]++
+					if len(indexSaver) > f+1 { //increase first next character
+						indexSaver[f+1]++
+						if indexSaver[f+1] > len(Characters)-1 {
+							block[f+1] = Characters[0]
+							continue
+						}
 
-			if string(block) == store.hash {
-				bf.responseCh <- string(block)
+						block[f+1] = Characters[indexSaver[f+1]]
+					} else { //add new character
+						block = append(block, Characters[0])
+						indexSaver = append(indexSaver, 0)
+					}
+				}
+
+				block[0] = Characters[indexSaver[0]]
+
+				indexSaver[0]++
+
+				if string(block) == store.hash {
+					bf.responseCh <- string(block)
+				}
 			}
 		}
 	}

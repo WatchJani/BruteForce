@@ -16,20 +16,30 @@ func (n *Node) Cancel(c *s.Ctx) {
 }
 
 func (n *Node) Start(c *s.Ctx) {
-	// mod := c.GetHeader()["mod"]
-loop:
+	mod := c.GetHeader()["mod"]
+
+	if mod == "single" {
+		for range runtime.NumCPU() - 1 {
+			n.Send(brute_force.NewDataStream("", []int{}, true))
+		}
+
+		defer func() {
+			for range runtime.NumCPU() - 1 {
+				//reset workers to max
+			}
+		}()
+	}
+
 	for {
 		select {
 		case <-n.processController:
-			break loop
+			return
 		default:
 			for index := 0; index*10_000_000_000 < 1_000_000_000_000; index++ {
-				n.Send(brute_force.NewDataStream("JankoKondic", brute_force.FindCombination(index*10_000_000_000)))
+				n.Send(brute_force.NewDataStream("JankoKondic", brute_force.FindCombination(index*10_000_000_000), false))
 			}
 		}
 	}
-
-	n.work = false
 }
 
 type Node struct {
