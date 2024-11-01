@@ -20,7 +20,7 @@ func (n *Node) Start(c *s.Ctx) {
 
 	if mod == "single" {
 		for range runtime.NumCPU() - 1 {
-			n.Send(brute_force.NewDataStream("", []int{}, true))
+			n.Send(brute_force.SingleThread())
 		}
 
 		defer func() {
@@ -45,7 +45,6 @@ func (n *Node) Start(c *s.Ctx) {
 type Node struct {
 	*brute_force.BruteForce
 	processController chan struct{}
-	work              bool
 }
 
 func NewNode(brutForce *brute_force.BruteForce) Node {

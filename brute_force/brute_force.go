@@ -32,6 +32,12 @@ func NewDataStream(hash string, startPoint []int, work bool) DataStream {
 	}
 }
 
+func SingleThread() DataStream {
+	return DataStream{
+		work: true,
+	}
+}
+
 func FindCombination(position int) []int {
 	if position == 0 {
 		return []int{0}
