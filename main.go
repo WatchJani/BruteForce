@@ -23,6 +23,7 @@ func (n *Node) Start(c *s.Ctx) {
 			n.Send(brute_force.SingleThread())
 		}
 
+		//reset state after return,if necessary
 		defer func() {
 			for range runtime.NumCPU() - 1 {
 				//reset workers to max
