@@ -1,9 +1,10 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"root/brute_force"
 	s "root/server"
-	"runtime"
 )
 
 func Exist(c *s.Ctx) {
@@ -11,47 +12,67 @@ func Exist(c *s.Ctx) {
 }
 
 func (n *Node) Cancel(c *s.Ctx) {
-	n.processController <- struct{}{}
+	if n.status {
+		c.ResWriter("cmd: info\n Msg:\r Server is not active\n")
+	}
+
+	n.cancel()
+	fmt.Println("my cancel") //test info
 	c.ResWriter("cmd: info\n Msg:\r Process is cancel!\n")
 }
 
 func (n *Node) Start(c *s.Ctx) {
-	mod := c.GetHeader()["mod"]
+	n.status = true
+	// mod := c.GetHeader()["mod"]
 
-	if mod == "single" {
-		for range runtime.NumCPU() - 1 {
-			n.Send(brute_force.SingleThread())
-		}
+	cors := 6
+	hash := "Janko"
 
-		//reset state after return,if necessary
-		defer func() {
-			for range runtime.NumCPU() - 1 {
-				//reset workers to max
-			}
-		}()
+	pointer := 0
+
+	for range cors {
+		//password, starting combination, cancel context
+		go n.Worker(hash, brute_force.FindCombination(pointer*10_000_000_000), n.CreateContext())
+		pointer++
 	}
 
-	for {
-		select {
-		case <-n.processController:
-			return
-		default:
-			for index := 0; index*10_000_000_000 < 1_000_000_000_000; index++ {
-				n.Send(brute_force.NewDataStream("JankoKondic", brute_force.FindCombination(index*10_000_000_000), false))
-			}
+	var (
+		numberOfIteration int
+		found             string
+	)
+
+	for range cors {
+		r := n.GetResponseCh()
+		numberOfIteration += r.GetIteration()
+
+		if r.GetPassword() == hash {
+			found = hash
+
+			fmt.Println("Found")
+			n.cancel()
 		}
 	}
+
+	format := fmt.Sprintf("cmd: end\n iteration: %d\n found: %s", numberOfIteration, found)
+	c.ResWriter(format)
 }
 
 type Node struct {
+	status bool
 	*brute_force.BruteForce
-	processController chan struct{}
+	cancel context.CancelFunc
+}
+
+func (n *Node) CreateContext() context.Context {
+	context, cancel := context.WithCancel(context.Background())
+	n.cancel = cancel
+
+	return context
 }
 
 func NewNode(brutForce *brute_force.BruteForce) Node {
 	return Node{
-		BruteForce:        brutForce,
-		processController: make(chan struct{}),
+		BruteForce: brutForce,
 	}
 }
 
@@ -59,10 +80,6 @@ func main() {
 	//system part
 	bf := brute_force.New()
 	node := NewNode(bf)
-
-	for index := range runtime.NumCPU() {
-		go bf.Worker(index)
-	}
 
 	//protocol part
 	mux := s.NewRouter()

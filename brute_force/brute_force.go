@@ -1,40 +1,33 @@
 package brute_force
 
+import "context"
+
 const Characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 type BruteForce struct {
-	dataStreamCh chan DataStream
-	responseCh   chan string
+	responseCh chan Response
+}
+
+type Response struct {
+	iteration int
+	password  string
+}
+
+func (r *Response) GetIteration() int {
+	return r.iteration
+}
+
+func (r *Response) GetPassword() string {
+	return r.password
+}
+
+func (bf *BruteForce) GetResponseCh() Response {
+	return <-bf.responseCh
 }
 
 func New() *BruteForce {
 	return &BruteForce{
-		dataStreamCh: make(chan DataStream),
-		responseCh:   make(chan string),
-	}
-}
-
-func (bf *BruteForce) Send(dataStream DataStream) {
-	bf.dataStreamCh <- dataStream
-}
-
-type DataStream struct {
-	hash       string //password
-	startPoint []int
-	work       bool
-}
-
-func NewDataStream(hash string, startPoint []int, work bool) DataStream {
-	return DataStream{
-		hash:       hash,
-		startPoint: startPoint,
-		work:       work,
-	}
-}
-
-func SingleThread() DataStream {
-	return DataStream{
-		work: true,
+		responseCh: make(chan Response),
 	}
 }
 
@@ -81,21 +74,17 @@ func pow(a, b int) int {
 }
 
 // 10_000_000_000
-func (bf *BruteForce) Worker(workerIndex int) {
-	var index int
+func (bf *BruteForce) Worker(hash string, indexSaver []int, ctx context.Context) {
+	index, block := 0, make([]byte, len(indexSaver))
+	for index, value := range indexSaver {
+		block[index] = Characters[value]
+	}
 
 	for {
-		store := <-bf.dataStreamCh
-
-		if store.work {
-			//wait
-		} else {
-			indexSaver := store.startPoint
-			block := make([]byte, len(indexSaver))
-			for index, value := range indexSaver {
-				block[index] = Characters[value]
-			}
-
+		select {
+		case <-ctx.Done():
+			goto end
+		default:
 			for ; index < 10_000_000_000; index++ {
 				for f := 0; indexSaver[f] > len(Characters)-1; f++ {
 					indexSaver[f] = 0
@@ -118,12 +107,16 @@ func (bf *BruteForce) Worker(workerIndex int) {
 
 				indexSaver[0]++
 
-				if string(block) == store.hash {
-					break
+				if string(block) == hash {
+					goto end
 				}
 			}
+		}
 
-			bf.responseCh <- string(block)
+	end:
+		bf.responseCh <- Response{
+			iteration: index,
+			password:  string(block),
 		}
 	}
 }
