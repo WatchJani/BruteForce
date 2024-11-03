@@ -1,18 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"root/brute_force"
 	s "root/server"
+	"runtime"
 )
 
 func Exist(c *s.Ctx) {
-	c.ResWriter("cmd: exist\n")
+	format := fmt.Sprintf("cmd: exist\n cors: %d", runtime.NumCPU())
+	c.ResWriter(format)
 }
 
 func main() {
 	//system part
-	bf := brute_force.New()
-	node := brute_force.NewNode(bf)
+	node := brute_force.NewNode()
 
 	//protocol part
 	mux := s.NewRouter()

@@ -10,8 +10,8 @@ func (n *Node) UpdateCancelManager(c *CancelManager) {
 	n.CancelManager = c
 }
 
-func NewNode(brutForce *BruteForce) Node {
+func NewNode() Node {
 	return Node{
-		BruteForce: brutForce,
+		BruteForce: New(),
 	}
 }

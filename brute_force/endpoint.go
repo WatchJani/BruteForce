@@ -3,6 +3,7 @@ package brute_force
 import (
 	"fmt"
 	s "root/server"
+	"runtime"
 	"time"
 )
 
@@ -22,7 +23,7 @@ func (n *Node) Start(c *s.Ctx) {
 	start := time.Now()
 	// mod := c.GetHeader()["mod"]
 
-	cors := 6
+	cors := runtime.NumCPU()
 	hash := "JankoKondic"
 
 	pointer := 0
