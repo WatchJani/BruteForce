@@ -1,7 +1,5 @@
 package brute_force
 
-import "context"
-
 const Characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 type BruteForce struct {
@@ -74,49 +72,42 @@ func pow(a, b int) int {
 }
 
 // 10_000_000_000
-func (bf *BruteForce) Worker(hash string, indexSaver []int, ctx context.Context) {
+func (bf *BruteForce) Worker(hash string, indexSaver []int, c *CancelManager) {
 	index, block := 0, make([]byte, len(indexSaver))
 	for index, value := range indexSaver {
 		block[index] = Characters[value]
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			goto end
-		default:
-			for ; index < 10_000_000_000; index++ {
-				for f := 0; indexSaver[f] > len(Characters)-1; f++ {
-					indexSaver[f] = 0
+	for ; index < 10_000_000_000 && c.GetState(); index++ {
+		for f := 0; indexSaver[f] > len(Characters)-1; f++ {
+			indexSaver[f] = 0
 
-					if len(indexSaver) > f+1 { //increase first next character
-						indexSaver[f+1]++
-						if indexSaver[f+1] > len(Characters)-1 {
-							block[f+1] = Characters[0]
-							continue
-						}
-
-						block[f+1] = Characters[indexSaver[f+1]]
-					} else { //add new character
-						block = append(block, Characters[0])
-						indexSaver = append(indexSaver, 0)
-					}
+			if len(indexSaver) > f+1 { //increase first next character
+				indexSaver[f+1]++
+				if indexSaver[f+1] > len(Characters)-1 {
+					block[f+1] = Characters[0]
+					continue
 				}
 
-				block[0] = Characters[indexSaver[0]]
-
-				indexSaver[0]++
-
-				if string(block) == hash {
-					goto end
-				}
+				block[f+1] = Characters[indexSaver[f+1]]
+			} else { //add new character
+				block = append(block, Characters[0])
+				indexSaver = append(indexSaver, 0)
 			}
 		}
 
-	end:
-		bf.responseCh <- Response{
-			iteration: index,
-			password:  string(block),
+		block[0] = Characters[indexSaver[0]]
+
+		indexSaver[0]++
+
+		if string(block) == hash {
+			c.CancelFn()
+			break
 		}
+	}
+
+	bf.responseCh <- Response{
+		iteration: index,
+		password:  string(block),
 	}
 }
