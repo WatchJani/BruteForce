@@ -18,52 +18,6 @@ func (n *Node) Cancel(c *s.Ctx) {
 	c.ResWriter("cmd: info\n Msg:\r Process is cancel!\n")
 }
 
-// func ParseMod(header map[string]string) (int, error) {
-// 	mod, ok := header["mod"]
-// 	if !ok {
-// 		return -1, fmt.Errorf("cant read header [mod]")
-// 	}
-
-// 	if mod == "single" {
-// 		return 1, nil
-// 	}
-
-// 	return runtime.NumCPU(), nil
-// }
-
-// func ParseStartPosition(header map[string]string) (int, error) {
-// 	number, ok := header["point"]
-// 	if !ok {
-// 		return -1, fmt.Errorf("cant read header [mod]")
-// 	}
-
-// 	startPointer, err := strconv.Atoi(number)
-// 	if err != nil {
-// 		return -1, fmt.Errorf(err.Error())
-// 	}
-
-// 	return startPointer, nil
-// }
-
-// func StartParser(header map[string]string) (int, int, string, error) {
-// 	mod, err := ParseMod(header)
-// 	if err != nil {
-// 		return 0, 0, "", err
-// 	}
-
-// 	hash, ok := header["hash"]
-// 	if !ok {
-// 		return 0, 0, "", err
-// 	}
-
-// 	startPoint, err := ParseStartPosition(header)
-// 	if err != nil {
-// 		return 0, 0, "", err
-// 	}
-
-// 	return mod, startPoint, hash, nil
-// }
-
 func (n *Node) Start(c *s.Ctx) {
 	payload := &struct {
 		Pointer int    `json:"pointer"`
@@ -88,7 +42,7 @@ func (n *Node) Start(c *s.Ctx) {
 	n.UpdateCancelManager(cancel)
 
 	for range cors {
-		go n.Worker(payload.Hash, FindCombination(payload.Pointer*10_000_000_000), cancel)
+		go n.Worker(payload.Hash, FindCombination(payload.Pointer), cancel)
 		payload.Pointer++
 	}
 
@@ -107,7 +61,14 @@ func (n *Node) Start(c *s.Ctx) {
 		}
 	}
 
-	format := fmt.Sprintf("cmd: end\n iteration: %d\n found: %s\n", numberOfIteration, found)
-	c.ResWriter(format)
+	c.ResWriter(StartFormat(cancel.GetState(), numberOfIteration, found))
 	n.status = false
+}
+
+func StartFormat(status bool, numberOfIteration int, found string) string {
+	if status {
+		return fmt.Sprintf("cmd: end\n iteration: %d\n found: %s\n", numberOfIteration, found)
+	}
+
+	return fmt.Sprintf("cmd: cancel\n")
 }
